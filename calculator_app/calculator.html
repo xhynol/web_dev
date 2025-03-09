@@ -71,13 +71,18 @@
 
       <button class="button parenthesis">(</button>
       <button class="button parenthesis">)</button>
+      <button class="button delete" onclick = "data.delete()">delete</button>
+      <button class="button clear" onclick="data.clear()">clear</button>
     </div>
 
     <script>
       const numbersArr = Array.from(document.getElementsByClassName("number"));
       const operatorsArr = Array.from(document.getElementsByClassName("operator"));
       const parenthesisArr = Array.from(document.getElementsByClassName("parenthesis"));
+      const equals = document.getElementsByClassName("equals")[0];
       const numberStrs = "0123456789".split("");
+      const precedence = {'+': 1, '-': 1, '*': 2, '/': 2};
+      const isOperator = (char) => ['+', '-', '*', '/'].includes(char);
 
       const data = {
         displayString: "0",
@@ -94,6 +99,18 @@
           }
           data.updateDisplay();
         },
+        clear: () =>{
+          data.displayString = "0";
+          data.updateDisplay();
+        },
+        delete: () =>{
+          data.displayString = data.displayString.replace(/.$/,"")
+          if(data.displayString == ""){
+            data.displayString = "0"
+          }
+          data.updateDisplay();
+        },
+
 
         appendStringOperator: (newChar) => {
           if (numberStrs.includes(data.displayString.slice(-1)) || data.displayString.slice(-1) === ")") {
@@ -127,10 +144,78 @@
           const display = document.getElementById("display");
           display.innerText = data.displayString;
         },
+
+        calculateEquation: (equation) =>{
+          data.displayString = data.calculatePostfix(data.convertPostfix(equation));
+          data.updateDisplay();
+        },
+      
+        convertPostfix: (infix) =>{
+          let output = []
+          let operator = []
+          let parenthesis
+          infix = infix.replace(/(\d)\(/g, '$1*(').replace(/\)(\d)/g, ")*$1");
+          numAndOps = infix.match(/\d+|\+|\-|\*|\/|\(|\)/g)
+          numAndOps.forEach(char => {
+            if(!isNaN(char)){
+              output.push(char)
+            }
+            else if(isOperator(char) || char == '('){
+              while (operator.length > 0 && operator[operator.length-1] !== '(' && char !== '('  && precedence[operator[operator.length-1] ] >= precedence[char]){
+                output.push(operator.pop());
+              }
+            
+              
+              operator.push(char)
+            
+            }
+            else if(char == ')'){
+              while(operator[operator.length-1] != '('){
+                output.push(operator.pop());
+              }
+              operator.pop();
+
+            }
+
+          });
+          while(operator.length > 0){
+            output.push(operator.pop());
+          }
+          return output.join(" ");
+        },
+
+        calculatePostfix: (postfix) =>{
+          let tokens = postfix.split(" ");
+          let stackNum = [];
+          tokens.forEach(token => {
+            if(!isNaN(token)){
+              stackNum.push(parseFloat (token))
+            }
+            else{
+              let num2 = stackNum.pop();
+              let num1 = stackNum.pop()
+
+              switch(token){
+                case '+' : stackNum.push (num1 + num2); break
+                case '-' : stackNum.push (num1 - num2); break
+                case '*' : stackNum.push (num1 * num2); break
+                case '/' : stackNum.push (num1 / num2); break
+              }
+            }
+            
+          });
+          return stackNum.pop();
+
+        }
       };
 
       const display = document.getElementById("display");
       display.innerText = data.displayString;
+
+
+      equals.addEventListener("click", (evt) => {
+        data.calculateEquation(data.displayString)
+      });
 
       numbersArr.map((elem, i) => {
         elem.addEventListener("click", (evt) => {
